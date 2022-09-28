@@ -10,6 +10,7 @@ import os
 import csv
 import subprocess
 import shlex
+import glob
 
 import numpy as np
 import pandas as pd
@@ -59,6 +60,8 @@ class StepBAMReadCoverage(abstractStep.AbstractStep):
     STEPSIZELONG        = "--step_size"
     SOFTWARELOCSHORT    = "-p"
     SOFTWARELOCLONG     = "--path_to_software"
+    BAMFILEFOLDERSHORT  = "-b"
+    BAMFILEFOLDERLONG   = "--bam_file_folder"
     
     PLOTHEIGHT          = 3
     PLOTWIDTH           = 10
@@ -71,7 +74,7 @@ class StepBAMReadCoverage(abstractStep.AbstractStep):
     STEPNORM            = "steppednorm"
     
 
-    def __init__(self, windowSize=0, stepSize=0, softwarePath= "samtools", refFastA=""):
+    def __init__(self, windowSize=0, stepSize=0, softwarePath= "samtools", refFastA="", bamFileFolder=""):
         '''
         Constructor
         '''
@@ -92,6 +95,8 @@ class StepBAMReadCoverage(abstractStep.AbstractStep):
         
         bamFileFolder = os.path.join(self.projectRoot, self.inFolder)
         
+        if len(self.inputFiles) == 1 & (not self.inputFiles[0]):
+            self.inputFiles = glob.glob(os.path.join(self.projectRoot, self.bamFileFolder) + os.path.sep + "*gen__trim_paired__sorted.bam")
         for inputFile in self.inputFiles:            
             if os.path.exists(os.path.join(bamFileFolder, inputFile)) == False:
                 logging.error("input file <" + os.path.exists(os.path.join(bamFileFolder, inputFile)) + "> not found")
@@ -386,10 +391,17 @@ class StepBAMReadCoverage(abstractStep.AbstractStep):
                 else:
                     self.refFastA = param.split(self.REFFASTALONG)[1].strip()
                 logging.info(INDENT*'-' + "reference FastA file set to <" + str(self.refFastA) + ">")
-            
+            elif self.BAMFILEFOLDERSHORT in param or self.BAMFILEFOLDERLONG in param:
+                if self.BAMFILEFOLDERLONG in param:
+                    self.bamFileFolder = param.split(self.BAMFILEFOLDERLONG)[1].strip()
+                else:
+                    self.bamFileFolder = param.split(self.BAMFILEFOLDERLONG)[1].strip()
+                logging.info(INDENT*'-' + "bamFileFolder set to <" + str(self.bamFileFolder) + ">")            
             
         
-           
+        if self.bamFileFolder == "":
+            logging.error("you need to specify a folder containing the BAM files")
+            raise Exception("you need to specify a folder containing the BAM files")           
 
         
 

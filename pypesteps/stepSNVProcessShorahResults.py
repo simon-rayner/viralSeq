@@ -13,7 +13,7 @@ from Bio import SeqIO
 import pandas as pd
 import numpy as np
 import plotnine as p9
-
+import glob
 
 
 import logging
@@ -61,6 +61,8 @@ class StepSNVProcessShorahResults(abstractStep.AbstractStep):
     OUTPUTFOLDER        = "processedsnvs"
     REFFASTASHORT       = "-r"
     REFFASTALONG        = "--ref_fasta"
+    BAMFILEFOLDERSHORT  = "-b"
+    BAMFILEFOLDERLONG   = "--bam_file_folder"
 
     SNVFILEEND          = "snv/SNVs_0.010000_final.csv"
     PLOTHEIGHT          = 5
@@ -71,11 +73,12 @@ class StepSNVProcessShorahResults(abstractStep.AbstractStep):
     YVAR                = "SNVs"
     
 
-    def __init__(self, refFastA=""):
+    def __init__(self, refFastA="", bamFileFolder=""):
         '''
         Constructor
         '''
         self.refFastA = refFastA
+        self.bamFileFolder = bamFileFolder
         pass
 
         
@@ -89,14 +92,16 @@ class StepSNVProcessShorahResults(abstractStep.AbstractStep):
         
 
         
+        if len(self.inputFiles) == 1 & (not self.inputFiles[0]):
+            self.inputFiles = glob.glob(os.path.join(self.projectRoot, self.bamFileFolder) + os.path.sep + "*gen__trim_paired__sorted.bam")
         for inputFile in self.inputFiles:            
             basename = os.path.splitext(os.path.basename(inputFile))[0]
             resultFolder = os.path.join(self.projectRoot, self.inFolder)
             snv_vcf_file = os.path.join(resultFolder, basename, self.SNVFILEEND)        
                                          
             if os.path.exists(snv_vcf_file) is False:
-                raise RuntimeError ("input file <" + snv_vcf_file + "> not found")
-                logging.error("input file <" + snv_vcf_file + "> not found")
+                #raise RuntimeError ("input file <" + snv_vcf_file + "> not found")
+                logging.warn("input file <" + snv_vcf_file + "> not found")
             else:
                 logging.info(INDENT*'-' + "found SNV VCF file <" + snv_vcf_file + ">")
         
@@ -116,6 +121,7 @@ class StepSNVProcessShorahResults(abstractStep.AbstractStep):
         contains the main operations for the step
         '''
         logger.info(INDENT*'-' + "executing step")
+        sourceFolder = os.path.join(self.projectRoot, self.inFolder)
         resultFolder = os.path.join(self.projectRoot, self.outFolder)
         
         logging.info(INDENT*'-' + "--results will be written to output folder <" + resultFolder + ">")
@@ -142,7 +148,7 @@ class StepSNVProcessShorahResults(abstractStep.AbstractStep):
         
         # The following is for plot cosmetics. 
         offset = 1  # the y distance for no SNV in a single sample
-        dOffset = 4 # the y distance between successive samples on the plot
+        dOffset = 1 # the y distance between successive samples on the plot
         delta = 2   # the y distance for SNV in a single sample
         
         dfAll = pd.DataFrame(columns=["Pos","frqMean","snvplot","datasource"])
@@ -161,7 +167,12 @@ class StepSNVProcessShorahResults(abstractStep.AbstractStep):
             # 
             basename = os.path.splitext(os.path.basename(inputFile))[0]
 
-            snv_vcf_file = os.path.join(resultFolder, basename, self.SNVFILEEND) 
+            snv_vcf_file = os.path.join(sourceFolder, basename, self.SNVFILEEND) 
+            if os.path.exists(snv_vcf_file) is False:
+                #raise RuntimeError ("input file <" + snv_vcf_file + "> not found")
+                logging.warn("input file <" + snv_vcf_file + "> not found")
+                continue
+            
             #dfTempVCF = pd.read_csv(snv_vcf_file, delimiter="\t", skiprows=17)
             dfTempCSV = pd.read_csv(snv_vcf_file)
             dfTempCSV['Frq1'] = pd.to_numeric(dfTempCSV['Frq1'], errors='coerce')
@@ -186,7 +197,7 @@ class StepSNVProcessShorahResults(abstractStep.AbstractStep):
         # write the unified dataframe as CSV
         plotFileAsCSV = os.path.join(resultFolder, self.projectID + "__SNVs__"+ self.md5string + ".csv")
         logging.info(INDENT*'-' + "--saving combined SNV data to <" + plotFileAsCSV +">")
-        dfSNV.to_csv(plotFileAsCSV)
+        dfAll.to_csv(plotFileAsCSV)
         
         
         
@@ -294,8 +305,17 @@ class StepSNVProcessShorahResults(abstractStep.AbstractStep):
                     self.refFastA = param.split(self.REFFASTALONG)[1].strip()
                 logging.info(INDENT*'-' + "reference FastA file set to <" + str(self.refFastA) + ">")
             
+            if self.BAMFILEFOLDERSHORT in param or self.BAMFILEFOLDERLONG in param:
+                if self.BAMFILEFOLDERLONG in param:
+                    self.bamFileFolder = param.split(self.BAMFILEFOLDERLONG)[1].strip()
+                else:
+                    self.bamFileFolder = param.split(self.BAMFILEFOLDERLONG)[1].strip()
+                logging.info(INDENT*'-' + "bamFileFolder set to <" + str(self.bamFileFolder) + ">")
+                
+        if self.bamFileFolder == "":
+            logging.error("you need to specify a folder containing the BAM files")
+            raise Exception("you need to specify a folder containing the BAM files")
 
-            
         
            
 

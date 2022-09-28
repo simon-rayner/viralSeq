@@ -12,6 +12,7 @@ import logging
 from Bio import SeqIO
 import subprocess
 import shlex
+import glob
 
 
 logger = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ class StepSliceAndSampleBAM(abstractStep.AbstractStep):
     OUTPUTFOLDER        = "subbedbams"
     REFFASTASHORT       = "-r"
     REFFASTALONG        = "--ref_fasta"
-    SLICEBEGINSHORT     = "-b"
+    SLICEBEGINSHORT     = "-g"
     SLICEBEGINLONG      = "--begin"
     SLICEENDSHORT       = "-e"
     SLICEENDLONG        = "--end"
@@ -52,7 +53,9 @@ class StepSliceAndSampleBAM(abstractStep.AbstractStep):
     SAMPLEPERCENT       = "bypercent"
     SAMPLEREADS         = "byreads"
     SOFTWARELOCSHORT    = "-p"
-    SOFTWARELOCLONG     = "--path_to_software"    
+    SOFTWARELOCLONG     = "--path_to_software"   
+    BAMFILEFOLDERSHORT  = "-b"
+    BAMFILEFOLDERLONG   = "--bam_file_folder"     
     
     PLOTHEIGHT          = 5
     PLOTWIDTH           = 10
@@ -64,7 +67,7 @@ class StepSliceAndSampleBAM(abstractStep.AbstractStep):
 
 
 
-    def __init__(self, begin = 0, end=0, minS=0, maxS=0, stepS=0, typeS = SAMPLEPERCENT, softwarePath= "samtools", refFastA=""):
+    def __init__(self, begin = 0, end=0, minS=0, maxS=0, stepS=0, typeS = SAMPLEPERCENT, softwarePath= "samtools", refFastA="", bamFileFolder=""):
         '''
         Constructor
         '''
@@ -79,6 +82,8 @@ class StepSliceAndSampleBAM(abstractStep.AbstractStep):
         
         self.sliceBAM = False
         self.sample = False
+        
+        self.bamFileFolder = bamFileFolder
         
         
 
@@ -295,6 +300,8 @@ class StepSliceAndSampleBAM(abstractStep.AbstractStep):
             raise Exception("input folder <" + os.path.join(self.projectRoot, self.inFolder) + "> not found")
         
         inputFolder = os.path.join(self.projectRoot, self.inFolder)
+        if len(self.inputFiles) == 1 & (not self.inputFiles[0]):
+            self.inputFiles = glob.glob(os.path.join(self.projectRoot, self.bamFileFolder) + os.path.sep + "*gen__trim_paired__sorted.bam")
         
         for inputFile in self.inputFiles:    
             inFile = os.path.join(os.path.join(inputFolder,inputFile))
@@ -432,9 +439,17 @@ class StepSliceAndSampleBAM(abstractStep.AbstractStep):
                 else:
                     self.sampleType = param.split(self.SAMPLETYPESHORT)[1].strip()
                 logging.info(INDENT*'-' + "sample type set to <" + self.sampleType + ">")
+
+            elif self.BAMFILEFOLDERSHORT in param or self.BAMFILEFOLDERLONG in param:
+                if self.BAMFILEFOLDERLONG in param:
+                    self.bamFileFolder = param.split(self.BAMFILEFOLDERLONG)[1].strip()
+                else:
+                    self.bamFileFolder = param.split(self.BAMFILEFOLDERLONG)[1].strip()
+                logging.info(INDENT*'-' + "bamFileFolder set to <" + str(self.bamFileFolder) + ">")            
             
-            
-        
+        if self.bamFileFolder == "":
+            logging.error("you need to specify a folder containing the BAM files")
+            raise Exception("you need to specify a folder containing the BAM files")        
            
         
         

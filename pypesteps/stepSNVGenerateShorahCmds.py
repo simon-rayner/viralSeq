@@ -7,6 +7,8 @@ Created on Dec 18, 2020
 @contact:    simon.rayner@medisin.uio.no
 '''
 import os
+import glob
+
 
 import logging
 
@@ -73,6 +75,9 @@ class StepSNVgenerateShorahCmds(abstractStep.AbstractStep):
             raise Exception("input folder <" + os.path.join(self.projectRoot, self.inFolder) + "> not found")
         
         bamFileFolder = os.path.join(self.projectRoot, self.inFolder)
+        
+        if len(self.inputFiles) == 1 & (not self.inputFiles[0]):
+            self.inputFiles = glob.glob(os.path.join(self.projectRoot, self.inFolder) + os.path.sep + "*gen__trim_paired__sorted.bam")
         
         for inputFile in self.inputFiles:            
             if os.path.exists(os.path.join(bamFileFolder, inputFile)) == False:

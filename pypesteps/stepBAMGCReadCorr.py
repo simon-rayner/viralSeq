@@ -10,6 +10,7 @@ import os
 import csv
 import subprocess
 import shlex
+import glob
 
 import pandas as pd
 import plotnine as p9
@@ -54,6 +55,8 @@ class StepBAMGCReadCorr(abstractStep.AbstractStep):
     WINSIZELONG         = "--window_size"
     STEPSIZESHORT       = "-s"
     STEPSIZELONG        = "--step_size"
+    BAMFILEFOLDERSHORT  = "-b"
+    BAMFILEFOLDERLONG   = "--bam_file_folder"
     
     PLOTHEIGHT          = 8
     PLOTWIDTH           = 10
@@ -63,7 +66,7 @@ class StepBAMGCReadCorr(abstractStep.AbstractStep):
     YVAR                = "readcoverage"
     
 
-    def __init__(self, windowSize=0, stepSize=0, gccoveragefile= "", readcoveragefile=""):
+    def __init__(self, windowSize=0, stepSize=0, gccoveragefile= "", readcoveragefile="", bamFileFolder=""):
         '''
         Constructor
         '''
@@ -71,6 +74,7 @@ class StepBAMGCReadCorr(abstractStep.AbstractStep):
         self.stepSize = stepSize
         self.gcCoverageFile = gccoveragefile
         self.readCoverageFile = readcoveragefile
+        self.bamFileFolder = bamFileFolder
 
         
     def checkInputData(self):
@@ -112,6 +116,8 @@ class StepBAMGCReadCorr(abstractStep.AbstractStep):
             
             
         # do the window and step size match for the GC and Read Coverage files?
+        if len(self.inputFiles) == 1 & (not self.inputFiles[0]):
+            self.inputFiles = glob.glob(os.path.join(self.projectRoot, self.inFolder) + os.path.sep + "*gen__trim_paired__sorted.bam")
         
         
         
@@ -268,6 +274,14 @@ class StepBAMGCReadCorr(abstractStep.AbstractStep):
                 else:
                     self.stepSize = int(param.split(self.STEPSIZE)[1].strip())
                 logging.info(INDENT*'-' + "step size set to <" + str(self.stepSize) + ">")
+                
+            if self.BAMFILEFOLDERSHORT in param or self.BAMFILEFOLDERLONG in param:
+                if self.BAMFILEFOLDERLONG in param:
+                    self.bamFileFolder = param.split(self.BAMFILEFOLDERLONG)[1].strip()
+                else:
+                    self.bamFileFolder = param.split(self.BAMFILEFOLDERLONG)[1].strip()
+                logging.info(INDENT*'-' + "bamFileFolder set to <" + str(self.bamFileFolder) + ">")
+
             
             
         if self.gcCoverageFile == "":
@@ -276,6 +290,10 @@ class StepBAMGCReadCorr(abstractStep.AbstractStep):
         if self.readCoverageFile == "":
             logging.error("you need to specify a folder containing the results of the read coverage analysis")
             raise Exception("you need to specify a folder containing the results of the read coverage analysis")
+        if self.bamFileFolder == "":
+            logging.error("you need to specify a folder containing the BAM files")
+            raise Exception("you need to specify a folder containing the BAM files")
+        
            
 
         
